@@ -1,0 +1,2 @@
+pycryptodomex
+yt_dlp
