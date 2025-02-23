@@ -18,28 +18,46 @@ When the script checks to see if you already have a video, it does not consider 
 # Examples
 
 Lookup the SRC ID for a game:
+```
     python3 src_archiver.py --lookup-game "Super Mario World"
+```
 
 Lookup the SRC IDs for a game's categories:
+```
     python3 src_archiver.py -g pd0wq31e --list-categories
+```
 
 Download all runs for SMW:
+```
     python3 src_archiver.py -g pd0wq31e --download
+```
 
 Download all 11 exit runs:
+```
     python3 src_archiver.py -g pd0wq31e -c n2y1y72o --download
+```
 
 List the runs you have not downloaded for the 95 no cape historical top 10 twitch highlights
+```
     python3 src_archiver.py -g pd0wq31e -c ndx31odq --list-missing --keep-better 10 --highlights-only
+```
 
 Download all current NSW runs with only twitch highlights:
+```
     python3 src_archiver.py -g pd0wq31e -c zdn1jxkq --download --current-only --highlights-only
+```
 
 Download the world record history for 96 exit:
+```
     python3 src_archiver.py -g pd0wq31e -c 7kjrn323 --download --keep-better 1
+```
 
 Download the current top 10 for all castles, prefer 480p or better if available and higher fps:
+```
     python3 src_archiver.py -g pd0wq31e -c 02qjj79d --download --keep-better 10 -q "b;res:480,fps"
+```
 
 Download the top 100 history for small only preferring 720p or better for top 10 and 360p or worse for the rest:
+```
     python3 src_archiver.py -g pd0wq31e -c n2y301do --download --keep-better 100 --downgrade-quality 10 -q "b;res:720" --low-quality "b;+res:360"
+```
