@@ -578,36 +578,36 @@ def log_all_runs(
         # We want to use these as dict keys, but json deserializes them as a list.
         run_data["player_ids"] = tuple(run_data["player_ids"])
 
-    for run in runs:
-        videos = run.get("videos")
-        if videos is None:
-            continue
-        if "links" in videos:
-            game = src_names.fetch_game(run["game"], requester)
-            category = src_names.fetch_category(run, requester)
-            player_ids = tuple(
-                sorted(
-                    [
-                        player.get("id", player.get("name", ""))
-                        for player in run["players"]
-                    ]
+    try:
+        for run in runs:
+            videos = run.get("videos")
+            if videos is None:
+                continue
+            if "links" in videos:
+                game = src_names.fetch_game(run["game"], requester)
+                category = src_names.fetch_category(run, requester)
+                player_ids = tuple(
+                    sorted(
+                        [
+                            player.get("id", player.get("name", ""))
+                            for player in run["players"]
+                        ]
+                    )
                 )
-            )
-            links = set(link["uri"] for link in videos.get("links"))
-            all_run_data[run["id"]] = {
-                "id": run["id"],
-                "date": run.get("date") or run.get("submitted") or "1000-01-01",
-                "player_ids": player_ids,
-                "game": game,
-                "game_id": run["game"],
-                "category": category,
-                "category_id": run["category"],
-                "time": float(run["times"]["primary_t"]),
-                "links": list(links),
-                "weblink": run["weblink"],
-            }
-
-        # Lazy way to do it, but saves partial progress for indexing.
+                links = set(link["uri"] for link in videos.get("links"))
+                all_run_data[run["id"]] = {
+                    "id": run["id"],
+                    "date": run.get("date") or run.get("submitted") or "1000-01-01",
+                    "player_ids": player_ids,
+                    "game": game,
+                    "game_id": run["game"],
+                    "category": category,
+                    "category_id": run["category"],
+                    "time": float(run["times"]["primary_t"]),
+                    "links": list(links),
+                    "weblink": run["weblink"],
+                }
+    finally:
         with open(path, "w") as outF:
             outF.write(json.dumps(all_run_data))
 
