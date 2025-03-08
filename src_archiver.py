@@ -172,7 +172,6 @@ class RunsFilter:
                     filtered_run_data[run["id"]] = run
                 continue
 
-            rank_by_runner = {}
             by_run_date = sorted(
                 [
                     (datetime.fromisoformat(run["date"]).replace(tzinfo=None), run)
@@ -181,26 +180,21 @@ class RunsFilter:
                 key=lambda x: x[0],
             )
 
-            current_runs = []
+            times_by_runner = {}
             for _, run in by_run_date:
-                run_with_time = (run["time"], run)
-                run_rank = bisect(current_runs, run_with_time[0], key=lambda x: x[0])
-                # Less than here because we need to be strictly below the limit.
+                current_times = sorted(times_by_runner.values())
+                run_rank = bisect(current_times, run["time"])
+                # Keep any run below the limit at submit time.
                 if run_rank < self.keep_rank:
-                    # If the player already has a run on the board,
-                    if run["player_ids"] not in rank_by_runner:
-                        current_runs.insert(run_rank, run_with_time)
-                        rank_by_runner[run["player_ids"]] = run_rank
-                        self.run_rank_at_submit[run["id"]] = run_rank
-                    else:
-                        # Less or equal here because the new PB might not have changed the player's rank.
-                        if run_rank <= rank_by_runner[run["player_ids"]]:
-                            del current_runs[rank_by_runner[run["player_ids"]]]
-                            current_runs.insert(run_rank, run_with_time)
-                            rank_by_runner[run["player_ids"]] = run_rank
-                            self.run_rank_at_submit[run["id"]] = run_rank
-                    # The run is better than the cutoff, so keep it.
+                    self.run_rank_at_submit[run["id"]] = run_rank
                     filtered_run_data[run["id"]] = run
+                # Now update the player's PB time if needed.
+                if (
+                    run["player_ids"] not in times_by_runner
+                    or times_by_runner[run["player_ids"]] > run["time"]
+                ):
+                    times_by_runner[run["player_ids"]] = run["time"]
+
         return filtered_run_data
 
     @staticmethod
@@ -215,7 +209,9 @@ class RunsFilter:
 
     def filter(self, all_run_data):
         # Filter the index down to the requested set.
-        # Current needs to come first, since we could have an old highlight and a current youtube video.
+        # Current needs to come first. We could have an old highlight and a
+        # current youtube video, the rank filter also changes meaning with
+        # current only.
         all_run_data = self._filter_run_type(
             self.game_id, self.category_id, all_run_data
         )
