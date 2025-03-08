@@ -190,7 +190,6 @@ class RunsFilter:
                     # If the player already has a run on the board,
                     if run["player_ids"] not in rank_by_runner:
                         current_runs.insert(run_rank, run_with_time)
-                        filtered_run_data[run["id"]] = run
                         rank_by_runner[run["player_ids"]] = run_rank
                         self.run_rank_at_submit[run["id"]] = run_rank
                     else:
@@ -199,8 +198,9 @@ class RunsFilter:
                             del current_runs[rank_by_runner[run["player_ids"]]]
                             current_runs.insert(run_rank, run_with_time)
                             rank_by_runner[run["player_ids"]] = run_rank
-                            filtered_run_data[run["id"]] = run
                             self.run_rank_at_submit[run["id"]] = run_rank
+                    # The run is better than the cutoff, so keep it.
+                    filtered_run_data[run["id"]] = run
         return filtered_run_data
 
     @staticmethod
@@ -400,6 +400,19 @@ def lookup_game_id_for_user(search_string, requester: RateLimitedRequest):
         print(f"{game['names']['international']}: {game['id']}")
 
 
+def get_archived_run_ids(runs_index_location):
+    archived_run_ids = []
+    # Check which runs we already have.
+    makedirs(f"{runs_index_location}/{RUNS_FOLDER}", exist_ok=True)
+    for dir_member in listdir(f"{runs_index_location}/{RUNS_FOLDER}"):
+        if isfile(f"{runs_index_location}/{RUNS_FOLDER}/{dir_member}"):
+            extension_index = dir_member.rfind(".")
+            run_id_start = dir_member.rfind("-") + 1
+            archived_run_id = dir_member[run_id_start:extension_index]
+            archived_run_ids.append(archived_run_id)
+    return archived_run_ids
+
+
 def prepare_local_index(
     game_id, category_id, runs_index_location, src_names, requester, runs_filter
 ):
@@ -414,14 +427,10 @@ def prepare_local_index(
     all_run_data = runs_filter.filter(all_run_data)
 
     # Check which runs we already have.
-    makedirs(f"{runs_index_location}/{RUNS_FOLDER}", exist_ok=True)
-    for dir_member in listdir(f"{runs_index_location}/{RUNS_FOLDER}"):
-        if isfile(f"{runs_index_location}/{RUNS_FOLDER}/{dir_member}"):
-            extension_index = dir_member.rfind(".")
-            run_id_start = dir_member.rfind("-") + 1
-            archived_run_id = dir_member[run_id_start:extension_index]
-            if archived_run_id in all_run_data:
-                all_run_data[archived_run_id]["stored_locally"] = True
+    archived_run_ids = get_archived_run_ids(runs_index_location)
+    for archived_run_id in archived_run_ids:
+        if archived_run_id in all_run_data:
+            all_run_data[archived_run_id]["stored_locally"] = True
     return all_run_data
 
 
@@ -447,6 +456,7 @@ def download_videos_for_user(
     )
 
     # Attempt to fetch the rest.
+    failed_runs = 0
     for index, (run_id, run_data) in enumerate(all_run_data.items()):
         if not run_data.get("stored_locally"):
             print(
@@ -470,9 +480,12 @@ def download_videos_for_user(
                     run_data["stored_locally"] = True
                     break
                 except VideoDownloadException as ex:
+                    failed_runs += 1
                     print(ex)
             if not run_data.get("stored_locally"):
-                print(f"Failed to download: {run_data['weblink']}")
+                print(
+                    f"Failed to download: {run_data['weblink']} ({failed_runs}/{len(all_run_data)})"
+                )
 
 
 def get_human_readable_name(
